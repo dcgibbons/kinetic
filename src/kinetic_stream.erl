@@ -137,7 +137,8 @@ increment_partition_num(State=#kinetic_stream{current_partition_num=Number}) ->
     State#kinetic_stream{current_partition_num=Number+1}.
 
 partition_key(#kinetic_stream{current_partition_num=Number, base_partition_name=BasePartitionName}) ->
-    BinNumber = integer_to_binary(Number),
+    % BinNumber = integer_to_binary(Number),
+    BinNumber = iolist_to_binary(tuple_to_list([Number])),
     <<BasePartitionName/binary, "-", BinNumber/binary>>.
 
 reset_timer(State=#kinetic_stream{flush_interval=FlushInterval, flush_tref=TRef}) ->
@@ -166,5 +167,3 @@ send_to_kinesis(StreamName, Buffer, PartitionKey, Timeout, Retries) ->
                     {error, Code, Headers, Body}
             end
     end.
-
-
