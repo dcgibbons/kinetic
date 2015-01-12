@@ -13,10 +13,10 @@ authorization_headers_v4(AwsCreds, Service, Region, Date, Target, Body) ->
     EndPoint = kinetic_utils:endpoint(Service, Region),
 
     % Changes once a day
-    Key0 = crypto:hmac(sha256, "AWS4" ++ SecretAccessKey, DateOnly),
-    Key1 = crypto:hmac(sha256, Key0, Region),
-    Key2 = crypto:hmac(sha256, Key1, Service),
-    SigningKey = crypto:hmac(sha256, Key2, "aws4_request"),
+    Key0 = hmac(sha256, "AWS4" ++ SecretAccessKey, DateOnly),
+    Key1 = hmac(sha256, Key0, Region),
+    Key2 = hmac(sha256, Key1, Service),
+    SigningKey = hmac(sha256, Key2, "aws4_request"),
 
     Headers = [
         {"Host", EndPoint},
@@ -51,7 +51,7 @@ authorization_headers_v4(AwsCreds, Service, Region, Date, Target, Body) ->
         hex_from_bin(crypto:hash(sha256, CanonicalRequest))],
 
     % Signing
-    Signature = hex_from_bin(crypto:hmac(sha256, SigningKey, StringToSign)),
+    Signature = hex_from_bin(hmac(sha256, SigningKey, StringToSign)),
     AuthorizationHeader =
         ["AWS4-HMAC-SHA256 Credential=",
             AccessKeyId, $/, DateOnly, $/, Region, $/, Service, "/aws4_request",
@@ -70,10 +70,10 @@ sign_v4(AccessKeyId, SecretAccessKey, Service, Region, Date, Target, Body) ->
     EndPoint = kinetic_utils:endpoint(Service, Region),
 
     % Changes once a day
-    Key0 = crypto:hmac(sha256, "AWS4" ++ SecretAccessKey, DateOnly),
-    Key1 = crypto:hmac(sha256, Key0, Region),
-    Key2 = crypto:hmac(sha256, Key1, Service),
-    SigningKey = crypto:hmac(sha256, Key2, "aws4_request"),
+    Key0 = hmac(sha256, "AWS4" ++ SecretAccessKey, DateOnly),
+    Key1 = hmac(sha256, Key0, Region),
+    Key2 = hmac(sha256, Key1, Service),
+    SigningKey = hmac(sha256, Key2, "aws4_request"),
 
     % Canonical Request
     CanonicalRequest = ["POST", $\n,
@@ -96,7 +96,7 @@ sign_v4(AccessKeyId, SecretAccessKey, Service, Region, Date, Target, Body) ->
 
 
     % Signing
-    Signature = hex_from_bin(crypto:hmac(sha256, SigningKey, StringToSign)),
+    Signature = hex_from_bin(hmac(sha256, SigningKey, StringToSign)),
     {ok,
       ["AWS4-HMAC-SHA256 Credential=",
        AccessKeyId, $/, DateOnly, $/, Region, $/, Service, "/aws4_request",
@@ -158,3 +158,15 @@ hex(N) when N < 10 ->
 hex(N) when N >= 10, N < 16 ->
     $a + (N-10).
 
+%%
+%% encrypt token
+%%
+hmac(Algo, Key, Payload) ->
+    try
+        crypto:hmac(Algo, Key, Payload)
+        catch
+            error:undef ->
+                H1 = crypto:hmac_init(Algo, Key),
+                H2 = crypto:hmac_update(H1, Payload),
+                crypto:hmac_final(H2)
+            end.
